@@ -84,22 +84,30 @@ The application uses SQLite with the following relational models:
 ---
 
 ## 📂 Project Structure
-
+```yaml
 sugarscout/
-├── backend/
-│ ├── main.py # FastAPI application, DB models, and routes
-│ ── requirements.txt # Python dependencies
-── frontend/
-│ ├── public/
-│ ├── src/
-│ │ ├── App.jsx # Main React application and UI components
-│ │ ├── main.jsx # React entry point
-│ │ └── index.css # Tailwind directives and custom animations
-│ ├── index.html # HTML shell
-│ ├── package.json # Node dependencies
-│ ├── tailwind.config.js # Tailwind configuration
-│ ── vite.config.js # Vite build configuration
-├── data/ # Persistent Docker volume mount (SQLite DB)
-├── docker-compose.yml # Docker orchestration
-└── Dockerfile # Multi-stage build (Node -> Python)
-
+│
+├── 📁 backend/
+│   │
+│   ├── 📄 main.py # FastAPI application, DB models, and routes
+│   └── 📄 requirements.txt # Python dependencies
+│
+├──  📁 frontend/
+│    │
+│    ├── 📁 public/
+│    ├── 📁 src/
+│    │
+│    │   ├── 📄 App.jsx # Main React application and UI components
+│    │   ├── 📄 main.jsx # React entry point
+│    │   └── 📄 index.css # Tailwind directives and custom animations
+│    │
+│    ├── 📄 index.html # HTML shell
+│    ├── 📄 package.json # Node dependencies
+│    ├── 📄 tailwind.config.js # Tailwind configuration
+│    └── 📄 vite.config.js # Vite build configuration
+│
+├── 📁 data/ # Persistent Docker volume mount (SQLite DB)
+│
+├── 📄 docker-compose.yml # Docker orchestration
+└── 📄 Dockerfile # Multi-stage build (Node -> Python)
+```
