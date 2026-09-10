@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  glucotrack:
+    build: .
+    container_name: sugarscout
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persistent storage for the SQLite database
+      - ./data:/app/data
+    restart: unless-stopped
