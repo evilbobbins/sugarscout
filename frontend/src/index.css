@@ -10,6 +10,9 @@ body {
   min-height: 100vh;
 }
 
+:focus-visible { outline: 3px solid #7c3aed; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+
 @keyframes gradientShift {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }

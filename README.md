@@ -46,6 +46,58 @@
 | **ORM** | SQLAlchemy | Database modeling and query management |
 | **Container**| Docker / Compose | Easy deployment and persistent volume mapping |
 
+## Running locally
+
+Start the application with Docker Compose:
+
+```sh
+docker compose up -d --build
+```
+
+Open `http://localhost:8000`. On the first visit, create the single local
+account. Passwords must be at least 10 characters and are stored as salted
+scrypt hashes, never as plaintext. The container listens on port 8000 on the
+home network; open `http://<computer-ip-address>:8000` from another device.
+Keep it on a trusted network only: HTTP does not encrypt traffic between the
+device and SugarScout. Add HTTPS before exposing it beyond your home network.
+
+To keep active sessions after container restarts, set a long random value for
+`SESSION_SECRET` in your environment before starting Compose. Without it,
+sessions are safely invalidated on restart and you simply sign in again.
+
+```sh
+SESSION_SECRET="replace-with-a-long-random-secret" docker compose up -d
+```
+
+The SQLite database is retained in `./data`. Back up the data from the Admin
+screen before moving or rebuilding your host.
+
+### Password recovery
+
+While signed in, use **Admin Settings → Change Password**. If you are locked
+out, the following command removes only the local login account; it does not
+delete tracker entries or backups. Restart the app if it is running, then open
+SugarScout and create a new account.
+
+```sh
+docker compose exec glucotrack python reset_account.py --reset-account
+```
+
+## Validation and tests
+
+The app validates positive insulin and glucose values, required entry names,
+and supported glucose units. Database upgrades add stable record UUIDs to
+existing rows automatically; new backups use these UUIDs, so merging the same
+backup is idempotent without treating two intentionally identical readings as
+the same record.
+
+Run the backend regression checks in Docker:
+
+```sh
+docker compose build
+docker run --rm -e DATABASE_PATH=/tmp/sugarscout-test.db --entrypoint sh sugarscout-glucotrack -c 'cd /app && python -m unittest discover -s tests'
+```
+
 ---
 
 ## 🗄️ Database Schema
