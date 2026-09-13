@@ -174,11 +174,12 @@ function SidebarSection({ title, tabs, page, setPage }) {
 function AuthScreen({ setupRequired, onAuthenticated }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const submit = async (event) => {
     event.preventDefault(); setError(''); setSubmitting(true);
-    try { await axios.post(`${API}/auth/${setupRequired ? 'setup' : 'login'}`, { username, password }); await onAuthenticated(); }
+    try { await axios.post(`${API}/auth/${setupRequired ? 'setup' : 'login'}`, { username, password, remember_me: rememberMe }); await onAuthenticated(); }
     catch (err) { setError(err.response?.data?.detail || 'Unable to sign in. Please try again.'); }
     finally { setSubmitting(false); }
   };
@@ -189,6 +190,7 @@ function AuthScreen({ setupRequired, onAuthenticated }) {
     <form onSubmit={submit}>
       <Input label="USERNAME" value={username} onChange={e => setUsername(e.target.value)} required />
       <Input label="PASSWORD" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+      {!setupRequired && <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4 cursor-pointer"><input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} className="w-4 h-4 accent-purple-600" /> Remember me on this device <span className="font-normal text-gray-500">(30 days)</span></label>}
       {setupRequired && <p className="text-xs text-gray-500 mb-4">Use at least 10 characters. Your password is stored as a secure hash.</p>}
       <Button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-purple-500 to-pink-500">{submitting ? 'Please wait…' : setupRequired ? 'Create account' : 'Sign in'}</Button>
     </form>

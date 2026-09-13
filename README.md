@@ -38,7 +38,7 @@ SugarScout is a private, single-user insulin, blood-glucose, food, and carbohydr
 
 - First-run local-account setup with a 10-character minimum password.
 - Passwords stored only as salted `scrypt` hashes.
-- Signed, `HttpOnly`, same-site session cookies; rate-limited login attempts.
+- Signed, `HttpOnly`, same-site session cookies; rate-limited login attempts and an optional 30-day “Remember me” session on the same device.
 - The Compose configuration exposes port 8000 so devices on the same trusted home network can connect.
 - Accessible focus treatment and reduced-motion support.
 
@@ -52,7 +52,7 @@ SugarScout is a private, single-user insulin, blood-glucose, food, and carbohydr
 ```sh
 git clone https://github.com/evilbobbins/sugarscout.git
 cd sugarscout
-SESSION_SECRET="replace-with-a-long-random-secret" docker compose up -d --build
+docker compose up -d --build
 ```
 
 Open `http://localhost:8000` on the host, or `http://<host-lan-ip>:8000` on another device. On the first visit, create the local account.
@@ -63,7 +63,7 @@ Generate a session secret with a password manager or:
 openssl rand -base64 48
 ```
 
-`SESSION_SECRET` is optional, but recommended: without it, sessions safely expire whenever the container restarts. The database persists at `./data/app.db`.
+By default, SugarScout generates a session secret once and stores it in the persistent data directory, so remembered sessions survive container restarts. To manage the secret yourself, set `SESSION_SECRET` when starting the container. The database persists at `./data/app.db`.
 
 ### Run the published image
 
@@ -72,7 +72,6 @@ The Docker Hub image is published for `linux/amd64`:
 ```sh
 docker run -d --name sugarscout \
   -p 8000:8000 \
-  -e SESSION_SECRET="replace-with-a-long-random-secret" \
   -v sugarscout-data:/app/data \
   --restart unless-stopped \
   evilbobbins/sugarscout:latest

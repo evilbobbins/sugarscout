@@ -196,6 +196,7 @@ class BulkDeleteSchema(BaseModel):
 class CredentialsSchema(BaseModel):
     username: str = Field(min_length=3, max_length=64, pattern=r"^[A-Za-z0-9_.-]+$")
     password: str = Field(min_length=10, max_length=256)
+    remember_me: bool = False
 
 class PasswordChangeSchema(BaseModel):
     current_password: str = Field(min_length=1, max_length=256)
@@ -203,9 +204,34 @@ class PasswordChangeSchema(BaseModel):
 
 # FastAPI App
 app = FastAPI()
-SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_urlsafe(48)).encode()
+
+def load_session_secret() -> bytes:
+    """Use an explicit secret or persist a generated one with the database."""
+    configured_secret = os.getenv("SESSION_SECRET", "").strip()
+    if configured_secret:
+        return configured_secret.encode()
+
+    secret_path = os.path.join(os.path.dirname(DB_PATH) or ".", ".session_secret")
+    try:
+        with open(secret_path, "r", encoding="utf-8") as secret_file:
+            stored_secret = secret_file.read().strip()
+        if stored_secret:
+            return stored_secret.encode()
+    except FileNotFoundError:
+        pass
+
+    generated_secret = secrets.token_urlsafe(48)
+    # The data directory is normally a private Docker volume. Restrict the
+    # generated secret further when the host filesystem supports permissions.
+    descriptor = os.open(secret_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as secret_file:
+        secret_file.write(generated_secret)
+    return generated_secret.encode()
+
+SESSION_SECRET = load_session_secret()
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
 SESSION_DURATION = timedelta(hours=8)
+REMEMBER_SESSION_DURATION = timedelta(days=30)
 LOGIN_WINDOW = timedelta(minutes=15)
 LOGIN_ATTEMPTS = 5
 failed_logins: dict[str, list[datetime]] = {}
@@ -228,8 +254,8 @@ def password_matches(password: str, encoded: str) -> bool:
     except (ValueError, TypeError):
         return False
 
-def make_session(username: str) -> str:
-    expires = int((datetime.now(timezone.utc) + SESSION_DURATION).timestamp())
+def make_session(username: str, duration: timedelta = SESSION_DURATION) -> str:
+    expires = int((datetime.now(timezone.utc) + duration).timestamp())
     payload = f"{username}:{expires}".encode()
     signature = hmac.new(SESSION_SECRET, payload, hashlib.sha256).digest()
     return base64.urlsafe_b64encode(payload + b"." + signature).decode()
@@ -247,8 +273,8 @@ def session_username(token: Optional[str]) -> Optional[str]:
     except (ValueError, UnicodeDecodeError):
         return None
 
-def set_session(response: Response, username: str):
-    response.set_cookie("sugarscout_session", make_session(username), httponly=True, secure=SESSION_COOKIE_SECURE, samesite="strict", max_age=int(SESSION_DURATION.total_seconds()), path="/")
+def set_session(response: Response, username: str, duration: timedelta = SESSION_DURATION):
+    response.set_cookie("sugarscout_session", make_session(username, duration), httponly=True, secure=SESSION_COOKIE_SECURE, samesite="strict", max_age=int(duration.total_seconds()), path="/")
 
 @app.middleware("http")
 async def protect_api(request: Request, call_next):
@@ -283,7 +309,7 @@ def login(data: CredentialsSchema, request: Request, response: Response, db: Ses
         failed_logins[address] = attempts + [now]
         raise HTTPException(401, "Invalid username or password")
     failed_logins.pop(address, None)
-    set_session(response, user.username)
+    set_session(response, user.username, REMEMBER_SESSION_DURATION if data.remember_me else SESSION_DURATION)
     return {"status": "authenticated"}
 
 @app.post("/api/auth/logout")
